@@ -35,3 +35,19 @@
   -标签（多对多）
 
 **更新浏览量/增加删除评论数/上一篇/下一篇功能函数
+
+
+二、后台管理模块
+1.模板包导入,安装simpleui、django-summernote
+2.settings配置
+3.admin.py配置
+4.超级用户建立
+5.同步数据库
+
+三、静态资源准备工作static
+1.把事先准备好的资源引入
+2.settings配置
+
+四、网页页面
+1.template文件夹
+2.前端未登录时的index_unlog页面，后端views urls
