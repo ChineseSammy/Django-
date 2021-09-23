@@ -50,4 +50,5 @@
 
 四、网页页面
 1.template文件夹
-2.前端未登录时的index_unlog页面，后端views urls
+2.前端未登录时的index_unlog页面，登录后的index页面 后端views urls
+3.登录页面 注册页面 登录完返回的页面 主页 注销页面 忘记密码和重置密码页面 后端的views urls

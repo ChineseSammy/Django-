@@ -6,5 +6,6 @@ from blog import views
 app_name = 'blog'
 
 urlpatterns = [
+    path('home', views.home,name='home'),
 
 ]
