@@ -20,11 +20,11 @@ from blog import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('blog/', include('blog.urls')),
+    path('summernote/', include('django_summernote.urls')),
     path('', views.index_unlog, name='index_unlog'),
     path('login/', views.login, name='login'),
     path('register', views.register, name='register'),
     path('logout', views.log_out, name='logout'),
     path('forget', views.forget, name='forget'),
     path('reset', views.reset, name='reset'),
-
 ]

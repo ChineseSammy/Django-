@@ -2,6 +2,7 @@
 
 from PIL import Image
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.http import HttpResponse, Http404
 from django.shortcuts import render
 
 from Samblog import settings
@@ -150,3 +151,153 @@ def reset(request):
             return render(request, 'reset.html', {'error': '两次密码输入不一致！'})
     else:
         return render(request, 'reset.html')
+
+
+def tags(request):
+    nickname = request.session['nickname']
+    tags = Tags.objects.all()
+    paginator = Paginator(tags, settings.TAG_NUM)  # 每页显示数量，对应settings.py中的PAGE_NUM
+    page = request.GET.get('page')  # 获取URL中page参数的值
+
+    try:
+        tags = paginator.page(page)
+    except PageNotAnInteger:
+        tags = paginator.page(1)
+    except EmptyPage:
+        tags = paginator.page(paginator.num_pages)
+    return render(request,'tags.html', {'tag_list': tags,'nickname':nickname,'avatar':request.session['avatar']})
+
+
+def userinfo(request):
+    username = request.session['username']
+    user = User.objects.get(username=username)
+    comments = ArticleComment.objects.filter(username=username)
+
+    paginator = Paginator(comments, settings.COMMENT_NUM)  # 每页显示数量，对应settings.py中的PAGE_NUM
+    page = request.GET.get('page')  # 获取URL中page参数的值
+    avatar = 'media/' + username + '.png'
+
+    try:
+        comment_list = paginator.page(page)
+    except PageNotAnInteger:
+        comment_list = paginator.page(1)
+    except EmptyPage:
+        comment_list = paginator.page(paginator.num_pages)
+    return render(request,'user_info.html',{'user':user,'comment_list':comment_list,'avatar':avatar})
+
+
+def search(request):
+    if request == 'POST':
+        searchinfo = request.POST.get('info', '')
+        posts = Article.objects.filter(title__icontains=searchinfo)
+
+        paginator = Paginator(posts, settings.PAGE_NUM)  # 每页显示数量，对应settings.py中的PAGE_NUM
+        page = request.GET.get('page')  # 获取URL中page参数的值
+
+        try:
+            post_list = paginator.page(page)
+        except PageNotAnInteger:
+            post_list = paginator.page(1)
+        except EmptyPage:
+            post_list = paginator.page(paginator.num_pages)
+        return render(request, 'search.html', {'post_list': post_list, 'nickname': request.session['nickname'],
+                                               'avatar': request.session['avatar']})
+    return render(request, 'home.html')
+
+
+def tags_detail(request, id):
+    posts =Article.objects.filter(tags = id)
+    tag = Tags.objects.get(id = id)
+    paginator = Paginator(posts, settings.PAGE_NUM)  # 每页显示数量，对应settings.py中的PAGE_NUM
+    page = request.GET.get('page')  # 获取URL中page参数的值
+    try:
+        post_list = paginator.page(page)
+    except PageNotAnInteger:
+        post_list = paginator.page(1)
+    except EmptyPage:
+        post_list = paginator.page(paginator.num_pages)
+    return render(request, 'tags_detail.html', {'post_list': post_list,'tag':tag,'nickname': request.session['nickname'],'avatar':request.session['avatar']})
+
+
+def category(request,id):
+    nickname = request.session['nickname']
+    posts =Article.objects.filter(category_id = str(id))
+    paginator = Paginator(posts, settings.PAGE_NUM)  # 每页显示数量，对应settings.py中的PAGE_NUM
+    page = request.GET.get('page')  # 获取URL中page参数的值
+    try:
+        post_list = paginator.page(page)
+    except PageNotAnInteger:
+        post_list = paginator.page(1)
+    except EmptyPage:
+        post_list = paginator.page(paginator.num_pages)
+    return render(request, 'category.html', {'post_list': post_list,'nickname': nickname,'avatar':request.session['avatar']})
+
+
+def detail(request, id):  # 查看文章详情
+    try:
+        post = Article.objects.get(article_id=str(id))
+        post.viewed()   # 更新浏览次数
+        tags = post.tags.all()  # 获取文章对应所有标签
+    except Article.DoesNotExist:
+        raise Http404
+    comments = ArticleComment.objects.filter(article = str(id))
+    paginator = Paginator(comments, 3)  # 每页显示3条评论
+    page = request.GET.get('page')  # 获取URL中page参数的值
+    try:
+        comment_list = paginator.page(page)
+    except PageNotAnInteger:
+        comment_list = paginator.page(1)
+    except EmptyPage:
+        comment_list = paginator.page(paginator.num_pages)
+    previous_post = Article.objects.filter(article_id=str(id-1))
+    if previous_post and id!=0:
+        previous_post = Article.objects.get(article_id=str(id-1))
+    next_post = Article.objects.filter(article_id=str(id+1))
+    if next_post:
+        next_post = Article.objects.get(article_id=str(id+1))
+    return render(request, 'post.html', {'post': post, 'nickname':request.session['nickname'],
+                                         'tags': tags,'comment_list':comment_list,'previouspost':previous_post,'nextpost':next_post,'avatar':request.session['avatar']})
+
+def commentpost(request):
+    if request.method == 'POST':
+        comment = request.POST.get('comment','')
+        id = request.POST.get('id')
+        print("ok")
+        if comment!='':
+            message = comment
+            user_img = 'media/'+request.session['username']+'.png'
+            nick_name = request.session['nickname']
+            user_name = request.session['username']
+            article = Article.objects.get(article_id = str(id))
+            newrecord = ArticleComment()
+            #newrecord.username = user_name
+            newrecord.body = message
+            newrecord.article = id
+            newrecord.userimg = user_img
+            newrecord.username = user_name
+            newrecord.nickname = nick_name
+            newrecord.title = article.title
+            newrecord.save()
+            user = User.objects.get(username = user_name)
+            user.comment()
+            return HttpResponse()
+
+
+def comment_del(request):
+    if request.method == 'POST':
+        comment_id = request.POST.get('comment_id')
+        username = request.session['username']
+        user = User.objects.get(username=username)
+        ArticleComment.objects.filter(id=str(comment_id)).delete()
+
+        user.comment_del()
+        comments = ArticleComment.objects.filter(username=username)
+        paginator = Paginator(comments, 1)  # 每页显示数量，对应settings.py中的PAGE_NUM
+        page = request.GET.get('page')  # 获取URL中page参数的值
+        try:
+            comment_list = paginator.page(page)
+        except PageNotAnInteger:
+            comment_list = paginator.page(1)
+        except EmptyPage:
+            comment_list = paginator.page(paginator.num_pages)
+        return HttpResponse()
